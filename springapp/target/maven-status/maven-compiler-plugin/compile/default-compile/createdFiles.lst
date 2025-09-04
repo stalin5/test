@@ -1,0 +1,5 @@
+com/examly/springapp/SpringappApplication.class
+com/examly/springapp/configuration/CorsConfiguration.class
+com/examly/springapp/configuration/JWTUtil.class
+com/examly/springapp/configuration/SecurityConfig.class
+com/examly/springapp/configuration/TestSecurityConfig.class
