@@ -1,149 +1,176 @@
-import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import "@testing-library/jest-dom";
-import App from "../App";
-
-jest.mock("../services/api", () => ({
-  getAllPosts: jest.fn(),
-  getPostsByHashtag: jest.fn(),
-  getPostsSortedByTime: jest.fn(),
-  addPost: jest.fn(),
-  deletePost: jest.fn(),
-}));
-
+// __tests__/playerApi.test.js
+import { render, screen } from "@testing-library/react";
+import axios from "axios";
 import {
-  getAllPosts,
-  getPostsByHashtag,
-  getPostsSortedByTime,
-  addPost,
-  deletePost,
+  addPlayer,
+  getAllPlayers,
+  getPlayersByRole,
+  getPlayersSortedByTeam,
+  deletePlayer,
 } from "../services/api";
+import Header from "../components/Header";
 
-describe("Instagram Post Manager App Tests", () => {
-  const mockPosts = [
-    { id: 1, caption: "Morning Coffee", imageUrl: "coffee.jpg", hashtags: "#coffee", timestamp: new Date().toISOString() },
-    { id: 2, caption: "Beautiful Sunset", imageUrl: "sunset.jpg", hashtags: "#sunset", timestamp: new Date().toISOString() },
-  ];
+// Mock axios
+jest.mock("axios");
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+describe("Header Component", () => {
+  test("renders the main title correctly", () => {
+    render(<Header />);
+    const titleElement = screen.getByText(/IPL Team Management/i);
+    expect(titleElement).toBeInTheDocument();
   });
 
-  // ---------- Basic Rendering ----------
-  test("renders header title and subtitle", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: [] });
-    render(<App />);
-    expect(await screen.findByText("Instagram Post Manager")).toBeInTheDocument();
-    expect(screen.getByText(/Manage your Instagram-style posts easily/i)).toBeInTheDocument();
+  test("renders the subtitle correctly", () => {
+    render(<Header />);
+    const subtitleElement = screen.getByText(/Manage your players and teams efficiently/i);
+    expect(subtitleElement).toBeInTheDocument();
+  });
+});
+
+
+describe("Player API Tests", () => {
+  const mockPlayer = {
+    id: "1",
+    name: "Virat Kohli",
+    team: "RCB",
+    role: "Batsman",
+    age: 34,
+    runs: 12000,
+  };
+
+  // ------------------- addPlayer Tests -------------------
+  test("addPlayer_should_post_new_player", async () => {
+    axios.post.mockResolvedValue({ data: mockPlayer });
+    const result = await addPlayer(mockPlayer);
+    expect(result.data).toEqual(mockPlayer);
+    expect(axios.post).toHaveBeenCalledWith(
+      "https://8080-fddecedccde329052728bccfaccecftwo.premiumproject.examly.io/api/players/addPlayer",
+      mockPlayer
+    );
   });
 
-  test("renders empty state when no posts", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: [] });
-    render(<App />);
-    expect(await screen.findByText("No posts available")).toBeInTheDocument();
+  test("addPlayer_should_handle_error", async () => {
+    axios.post.mockRejectedValue(new Error("Network Error"));
+    await expect(addPlayer(mockPlayer)).rejects.toThrow("Network Error");
   });
 
-  test("renders list of posts", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: mockPosts });
-    render(<App />);
-    expect(await screen.findByText("Morning Coffee")).toBeInTheDocument();
-    expect(screen.getByText("Beautiful Sunset")).toBeInTheDocument();
+  test("addPlayer_should_call_with_correct_url", async () => {
+    axios.post.mockResolvedValue({ data: mockPlayer });
+    await addPlayer(mockPlayer);
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining("/addPlayer"),
+      mockPlayer
+    );
   });
 
-  // ---------- Post Creation ----------
-  test("adds a new post", async () => {
-    getAllPosts
-      .mockResolvedValueOnce({ data: [] })
-      .mockResolvedValueOnce({ data: [...mockPosts, { id: 3, caption: "New Post", imageUrl: "new.jpg", hashtags: "#new" }] });
-
-    addPost.mockResolvedValueOnce({});
-
-    render(<App />);
-    fireEvent.change(screen.getByPlaceholderText("Caption"), { target: { value: "New Post" } });
-    fireEvent.change(screen.getByPlaceholderText("Image URL"), { target: { value: "new.jpg" } });
-    fireEvent.change(screen.getByPlaceholderText("#hashtags"), { target: { value: "#new" } });
-
-    fireEvent.click(screen.getByText("Add Post"));
-
-    expect(await screen.findByText("New Post")).toBeInTheDocument();
+  test("addPlayer_should_return_player_id", async () => {
+    axios.post.mockResolvedValue({ data: { id: "123" } });
+    const result = await addPlayer(mockPlayer);
+    expect(result.data.id).toBe("123");
   });
 
-  test("form requires all fields", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: [] });
-    render(<App />);
-    fireEvent.click(screen.getByText("Add Post"));
-    expect(await screen.findByPlaceholderText("Caption")).toBeInTheDocument();
+  // ------------------- getAllPlayers Tests -------------------
+  test("getAllPlayers_should_fetch_all_players", async () => {
+    axios.get.mockResolvedValue({ data: [mockPlayer] });
+    const result = await getAllPlayers();
+    expect(result.data).toEqual([mockPlayer]);
   });
 
-  // ---------- Post Deletion ----------
-  test("deletes a post", async () => {
-    getAllPosts
-      .mockResolvedValueOnce({ data: mockPosts })
-      .mockResolvedValueOnce({ data: [mockPosts[1]] });
-
-    deletePost.mockResolvedValueOnce({});
-
-    render(<App />);
-    expect(await screen.findByText("Morning Coffee")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByText("Delete")[0]);
-
-    await waitFor(() => expect(screen.queryByText("Morning Coffee")).not.toBeInTheDocument());
+  test("getAllPlayers_should_handle_empty_list", async () => {
+    axios.get.mockResolvedValue({ data: [] });
+    const result = await getAllPlayers();
+    expect(result.data.length).toBe(0);
   });
 
-  // ---------- Filtering ----------
-  test("filters posts by hashtag #coffee", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: mockPosts });
-    getPostsByHashtag.mockResolvedValueOnce({ data: [mockPosts[0]] });
-
-    render(<App />);
-    fireEvent.change(await screen.findByDisplayValue("All Posts"), { target: { value: "#coffee" } });
-
-    expect(await screen.findByText("Morning Coffee")).toBeInTheDocument();
-    expect(screen.queryByText("Beautiful Sunset")).not.toBeInTheDocument();
+  test("getAllPlayers_should_throw_error_on_failure", async () => {
+    axios.get.mockRejectedValue(new Error("Server Down"));
+    await expect(getAllPlayers()).rejects.toThrow("Server Down");
   });
 
-  test("filters posts by hashtag #sunset", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: mockPosts });
-    getPostsByHashtag.mockResolvedValueOnce({ data: [mockPosts[1]] });
-
-    render(<App />);
-    fireEvent.change(await screen.findByDisplayValue("All Posts"), { target: { value: "#sunset" } });
-
-    expect(await screen.findByText("Beautiful Sunset")).toBeInTheDocument();
-    expect(screen.queryByText("Morning Coffee")).not.toBeInTheDocument();
+  test("getAllPlayers_should_return_array", async () => {
+    axios.get.mockResolvedValue({ data: [mockPlayer, mockPlayer] });
+    const result = await getAllPlayers();
+    expect(Array.isArray(result.data)).toBe(true);
   });
 
-  test("shows all posts when filter reset", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: mockPosts });
-    render(<App />);
-    fireEvent.change(await screen.findByDisplayValue("All Posts"), { target: { value: "all" } });
-    expect(await screen.findByText("Morning Coffee")).toBeInTheDocument();
-    expect(screen.getByText("Beautiful Sunset")).toBeInTheDocument();
+  // ------------------- getPlayersByRole Tests -------------------
+  test("getPlayersByRole_should_fetch_by_role", async () => {
+    axios.get.mockResolvedValue({ data: [mockPlayer] });
+    const result = await getPlayersByRole("Batsman");
+    expect(result.data[0].role).toBe("Batsman");
   });
 
-  // ---------- Sorting ----------
-  test("sorts posts by time", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: mockPosts });
-    getPostsSortedByTime.mockResolvedValueOnce({ data: [...mockPosts].reverse() });
-
-    render(<App />);
-    fireEvent.change(await screen.findByDisplayValue("All Posts"), { target: { value: "sorted" } });
-
-    expect(await screen.findByText("Beautiful Sunset")).toBeInTheDocument();
+  test("getPlayersByRole_should_call_correct_url", async () => {
+    axios.get.mockResolvedValue({ data: [mockPlayer] });
+    await getPlayersByRole("Bowler");
+    expect(axios.get).toHaveBeenCalledWith(
+      expect.stringContaining("role=Bowler")
+    );
   });
 
-  // ---------- UI Elements ----------
-  test("dropdown filter is visible", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: [] });
-    render(<App />);
-    expect(await screen.findByDisplayValue("All Posts")).toBeInTheDocument();
+  test("getPlayersByRole_should_handle_no_players", async () => {
+    axios.get.mockResolvedValue({ data: [] });
+    const result = await getPlayersByRole("Wicketkeeper");
+    expect(result.data).toEqual([]);
   });
 
-  test("delete button exists in post card", async () => {
-    getAllPosts.mockResolvedValueOnce({ data: mockPosts });
-    render(<App />);
-    expect(await screen.findAllByText("Delete")).toHaveLength(2);
+  test("getPlayersByRole_should_throw_error", async () => {
+    axios.get.mockRejectedValue(new Error("Invalid role"));
+    await expect(getPlayersByRole("Unknown")).rejects.toThrow("Invalid role");
   });
 
+  // ------------------- getPlayersSortedByTeam Tests -------------------
+  test("getPlayersSortedByTeam_should_fetch_sorted_list", async () => {
+    const players = [
+      { id: "1", team: "CSK" },
+      { id: "2", team: "MI" },
+    ];
+    axios.get.mockResolvedValue({ data: players });
+    const result = await getPlayersSortedByTeam();
+    expect(result.data[0].team).toBe("CSK");
+  });
 
+  test("getPlayersSortedByTeam_should_return_array", async () => {
+    axios.get.mockResolvedValue({ data: [mockPlayer] });
+    const result = await getPlayersSortedByTeam();
+    expect(Array.isArray(result.data)).toBe(true);
+  });
+
+  test("getPlayersSortedByTeam_should_throw_error", async () => {
+    axios.get.mockRejectedValue(new Error("Sort Error"));
+    await expect(getPlayersSortedByTeam()).rejects.toThrow("Sort Error");
+  });
+
+  test("getPlayersSortedByTeam_should_match_length", async () => {
+    const players = [mockPlayer, mockPlayer];
+    axios.get.mockResolvedValue({ data: players });
+    const result = await getPlayersSortedByTeam();
+    expect(result.data.length).toBe(2);
+  });
+
+  // ------------------- deletePlayer Tests -------------------
+  test("deletePlayer_should_delete_player", async () => {
+    axios.delete.mockResolvedValue({ data: { success: true } });
+    const result = await deletePlayer("1");
+    expect(result.data.success).toBe(true);
+  });
+
+  test("deletePlayer_should_call_correct_url", async () => {
+    axios.delete.mockResolvedValue({ data: {} });
+    await deletePlayer("1");
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining("/1")
+    );
+  });
+
+  test("deletePlayer_should_throw_error", async () => {
+    axios.delete.mockRejectedValue(new Error("Delete failed"));
+    await expect(deletePlayer("999")).rejects.toThrow("Delete failed");
+  });
+
+  test("deletePlayer_should_return_object", async () => {
+    axios.delete.mockResolvedValue({ data: { success: true } });
+    const result = await deletePlayer("1");
+    expect(typeof result.data).toBe("object");
+  });
 });

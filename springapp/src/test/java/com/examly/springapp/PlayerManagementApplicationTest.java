@@ -11,7 +11,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -19,15 +20,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SpringBootTest(classes = SpringappApplication.class)
 @AutoConfigureMockMvc
-class SpringappPostTests {
+class SpringappBookingTests {
 
     @Autowired
     private MockMvc mockMvc;
@@ -36,20 +35,20 @@ class SpringappPostTests {
 
     @Order(1)
     @Test
-    void AddPostReturns200() throws Exception {
-        String postData = """
+    void AddBookingReturns200() throws Exception {
+        String bookingData = """
                 {
-                    "caption": "Hello World",
-                    "imageUrl": "https://example.com/test.jpg",
-                    "hashtags": "#test",
-                    "timestamp": "2025-08-30T12:00:00"
+                    "customerName": "John Doe",
+                    "pickupLocation": "Central Park",
+                    "dropLocation": "Times Square",
+                    "rideTime": "2025-08-25T12:00:00"
                 }
                 """;
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/posts/addPost")
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/bookings")
                         .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(postData)
+                        .content(bookingData)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn();
@@ -57,8 +56,8 @@ class SpringappPostTests {
 
     @Order(2)
     @Test
-    void GetAllPostsReturnsArray() throws Exception {
-        mockMvc.perform(get("/api/posts/allPosts")
+    void GetAllBookingsReturnsArray() throws Exception {
+        mockMvc.perform(get("/api/bookings")
                         .with(jwt())
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
@@ -69,24 +68,45 @@ class SpringappPostTests {
 
     @Order(3)
     @Test
-    void GetPostsByHashtagReturns200() throws Exception {
-        mockMvc.perform(get("/api/posts/byHashtag")
+    void GetBookingByIdReturns200() throws Exception {
+        mockMvc.perform(get("/api/bookings/1")
                         .with(jwt())
-                        .param("tag", "#test")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].caption").exists())
+                .andExpect(jsonPath("$.customerName").exists())
                 .andReturn();
     }
 
     @Order(4)
     @Test
-    void GetPostsSortedByTimeReturns200() throws Exception {
-        mockMvc.perform(get("/api/posts/sortedByTime")
+    void UpdateBookingReturns200() throws Exception {
+        String updatedBooking = """
+                {
+                    "customerName": "Jane Doe",
+                    "pickupLocation": "Broadway",
+                    "dropLocation": "Wall Street",
+                    "rideTime": "2025-08-25T15:00:00"
+                }
+                """;
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/bookings/1")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updatedBooking)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerName").value("Jane Doe"))
+                .andReturn();
+    }
+
+    @Order(5)
+    @Test
+    void DeleteBookingReturns200() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/bookings/1")
                         .with(jwt())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
+                .andExpect(MockMvcResultMatchers.content().string("Booking deleted successfully!"))
                 .andReturn();
     }
 
@@ -100,8 +120,8 @@ class SpringappPostTests {
     }
 
     @Test
-    void PostControllerFileExists() {
-        String filePath = "src/main/java/com/examly/springapp/controller/PostController.java";
+    void BookingControllerFileExists() {
+        String filePath = "src/main/java/com/examly/springapp/controller/BookingController.java";
         File file = new File(filePath);
         assertTrue(file.exists() && file.isFile());
     }
@@ -114,8 +134,8 @@ class SpringappPostTests {
     }
 
     @Test
-    void PostModelFileExists() {
-        String filePath = "src/main/java/com/examly/springapp/model/Post.java";
+    void BookingModelFileExists() {
+        String filePath = "src/main/java/com/examly/springapp/model/Booking.java";
         File file = new File(filePath);
         assertTrue(file.exists() && file.isFile());
     }
@@ -135,53 +155,68 @@ class SpringappPostTests {
     }
 
     @Test
-    void PostServiceClassExists() {
-        checkClassExists("com.examly.springapp.service.PostService");
+    void BookingServiceClassExists() {
+        checkClassExists("com.examly.springapp.service.BookingService");
     }
 
     @Test
-    void PostModelClassExists() {
-        checkClassExists("com.examly.springapp.model.Post");
+    void BookingModelClassExists() {
+        checkClassExists("com.examly.springapp.model.Booking");
     }
 
     @Test
-    void PostModelHasCaptionField() {
-        checkFieldExists("com.examly.springapp.model.Post", "caption");
+    void BookingModelHasCustomerNameField() {
+        checkFieldExists("com.examly.springapp.model.Booking", "customerName");
     }
 
     @Test
-    void PostModelHasImageUrlField() {
-        checkFieldExists("com.examly.springapp.model.Post", "imageUrl");
+    void BookingModelHasPickupLocationField() {
+        checkFieldExists("com.examly.springapp.model.Booking", "pickupLocation");
     }
 
     @Test
-    void PostModelHasHashtagsField() {
-        checkFieldExists("com.examly.springapp.model.Post", "hashtags");
+    void BookingModelHasDropLocationField() {
+        checkFieldExists("com.examly.springapp.model.Booking", "dropLocation");
     }
 
     @Test
-    void PostModelHasTimestampField() {
-        checkFieldExists("com.examly.springapp.model.Post", "timestamp");
+    void BookingModelHasRideTimeField() {
+        checkFieldExists("com.examly.springapp.model.Booking", "rideTime");
     }
 
     @Test
-    void PostRepoExtendsJpaRepository() {
-        checkClassImplementsInterface("com.examly.springapp.repository.PostRepository", "org.springframework.data.jpa.repository.JpaRepository");
+    void BookingModelHasFareField() {
+        checkFieldExists("com.examly.springapp.model.Booking", "fare");
     }
 
     @Test
-    void PostNotFoundExceptionClassExists() {
-        checkClassExists("com.examly.springapp.exception.PostNotFoundException");
+    void BookingRepoExtendsJpaRepository() {
+        checkClassImplementsInterface("com.examly.springapp.repository.BookingRepository", "org.springframework.data.jpa.repository.JpaRepository");
     }
 
     @Test
-    void PostNotFoundExceptionExtendsRuntimeException() {
+    void CorsConfigurationClassExists() {
+        checkClassExists("com.examly.springapp.configuration.CorsConfiguration");
+    }
+
+    @Test
+    void CorsConfigurationHasConfigurationAnnotation() {
+        checkClassHasAnnotation("com.examly.springapp.configuration.CorsConfiguration", "org.springframework.context.annotation.Configuration");
+    }
+
+    @Test
+    void BookingNotFoundExceptionClassExists() {
+        checkClassExists("com.examly.springapp.exception.BookingNotFoundException");
+    }
+
+    @Test
+    void BookingNotFoundExceptionExtendsRuntimeException() {
         try {
-            Class<?> clazz = Class.forName("com.examly.springapp.exception.PostNotFoundException");
+            Class<?> clazz = Class.forName("com.examly.springapp.exception.BookingNotFoundException");
             assertTrue(RuntimeException.class.isAssignableFrom(clazz),
-                    "PostNotFoundException should extend RuntimeException");
+                    "BookingNotFoundException should extend RuntimeException");
         } catch (ClassNotFoundException e) {
-            fail("PostNotFoundException class does not exist.");
+            fail("BookingNotFoundException class does not exist.");
         }
     }
 
@@ -211,6 +246,16 @@ class SpringappPostTests {
             assertTrue(interfaceClazz.isAssignableFrom(clazz));
         } catch (ClassNotFoundException e) {
             fail("Class " + className + " or interface " + interfaceName + " does not exist.");
+        }
+    }
+
+    private void checkClassHasAnnotation(String className, String annotationName) {
+        try {
+            Class<?> clazz = Class.forName(className);
+            Class<?> annotationClazz = Class.forName(annotationName);
+            assertTrue(clazz.isAnnotationPresent((Class<? extends java.lang.annotation.Annotation>) annotationClazz));
+        } catch (ClassNotFoundException e) {
+            fail("Class " + className + " or annotation " + annotationName + " does not exist.");
         }
     }
 }
