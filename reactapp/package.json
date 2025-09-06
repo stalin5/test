@@ -6,11 +6,9 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.11.0",
-    "canvas": "^2.11.2",
+    "axios": "^1.6.3",
     "history": "^5.3.0",
     "jest": "^27.5.1",
-    "lucide-react": "^0.539.0",
     "msw": "^1.2.4",
     "node-fetch": "^3.3.2",
     "react": "^18.2.0",
@@ -24,7 +22,8 @@
     "start": "BROWSER=none PORT=8081 react-scripts start --disable-host-check --host 0.0.0.0",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "test:ci": "npx react-scripts test --silent --watchAll=false --ci --bail --testLocationInResults"
   },
   "eslintConfig": {
     "extends": [
@@ -45,15 +44,6 @@
     ]
   },
   "devDependencies": {
-    "@babel/core": "^7.28.0",
-    "@babel/preset-env": "^7.28.0",
-    "@babel/preset-react": "^7.27.1",
-    "babel-jest": "^30.0.5",
     "jest-fetch-mock": "^3.0.3"
-  },
-  "jest": {
-    "transformIgnorePatterns": [
-      "/node_modules/(?!axios)/"
-    ]
   }
 }

@@ -1,18 +1,14 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import BookingForm from "./components/BookingForm";
-import BookingList from "./components/BookingList";
+import PlayerTable from "./components/PlayerTable";
+import './App.css';
 
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<BookingList />} />
-        <Route path="/add" element={<BookingForm />} />
-      </Routes>
-    </Router>
+    <div className="App">
+      <div>
+        <PlayerTable />
+      </div>
+    </div>
   );
 }
 
